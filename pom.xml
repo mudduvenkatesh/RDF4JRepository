@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+    ═══════════════════════════════════════════════════════════════════════════
+     Upgrade summary
+     ───────────────────────────────────────────────────────────────────────
+     • Spring Boot  3.2.0  →  4.0.6   (released 2026-04-23)
+     • Eclipse RDF4J 4.3.9  →  5.3.0  (released 2026-04-17)
+     • Java         17      →  25      (first-class support in Boot 4)
+     • Spring Framework 6.x → 7.0 (transitive via Boot BOM)
+     • Jakarta EE   10      →  11      (Servlet 6.1, Validation 3.1, …)
+     • Jackson      2.x     →  3.x     (new default in Boot 4; group id unchanged
+                                         but internal packages moved to tools.jackson.*)
+     • JUnit        4 gone  — already on JUnit Jupiter (5), no change needed
+     • JSpecify     added   — standardised null-safety annotations (Boot 4 portfolio-wide)
+     • NullAway     added   — optional build-time null checker (requires JDK 21+)
+     • GraalVM native plugin aligned to GraalVM 25 (required by Boot 4 AOT)
+    ═══════════════════════════════════════════════════════════════════════════
+    -->
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <!-- Spring Boot 4.0.6 — GA, released 2026-04-23 -->
+        <version>4.0.6</version>
+    </parent>
+
+    <groupId>com.example</groupId>
+    <artifactId>ontotext-graphdb-repository</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>Ontotext GraphDB Spring Repository Demo</name>
+
+    <properties>
+        <!-- ── Java ───────────────────────────────────────────────────────── -->
+        <!--
+            Boot 4 minimum is Java 17; Java 25 is the recommended LTS target
+            for new projects (first-class support added in Boot 4.0.0).
+        -->
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+
+        <!-- ── Eclipse RDF4J ─────────────────────────────────────────────── -->
+        <!-- 5.3.0 — GA, released 2026-04-17; 22 issues resolved since 5.2.2 -->
+        <rdf4j.version>5.3.0</rdf4j.version>
+
+        <!-- ── JSpecify (null-safety annotations, Boot 4 / Framework 7) ─── -->
+        <jspecify.version>1.0.0</jspecify.version>
+
+        <!-- ── NullAway (optional build-time null checker; requires JDK 21+) -->
+        <nullaway.version>0.12.3</nullaway.version>
+        <error-prone.version>2.36.0</error-prone.version>
+
+        <!-- ── Encoding ──────────────────────────────────────────────────── -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <dependencies>
+
+        <!-- ── Spring Boot Web (Tomcat 11 / Servlet 6.1 via Boot 4 BOM) ── -->
+        <!--
+            Undertow was REMOVED in Spring Boot 4.0 (not yet Servlet 6.1
+            compatible). Default embedded container is now Tomcat 11.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring context, auto-configuration, @ConfigurationProperties -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- ── Eclipse RDF4J 5.3.0 runtime BOM ──────────────────────────── -->
+        <!--
+            Includes the SPARQL HTTP Repository client used to connect to
+            Ontotext GraphDB. New in 5.3.0:
+              • Richer EXPLAIN with runtime telemetry
+              • Standalone rdf4j-server-boot distribution
+              • Faster LMDB / DISTINCT / Lucene workloads
+              • Direct .xlsx and .ods SPARQL result export
+        -->
+        <dependency>
+            <groupId>org.eclipse.rdf4j</groupId>
+            <artifactId>rdf4j-runtime</artifactId>
+            <version>${rdf4j.version}</version>
+            <type>pom</type>
+        </dependency>
+
+        <!--
+            SPARQL query result parsers — JSON is the default wire format
+            used by Ontotext GraphDB's SPARQL endpoint.
+            Text/CSV parsers included for tabular result export.
+            New in 5.3.0: OOXML (.xlsx) and ODF (.ods) result set formats
+            are now part of rdf4j-runtime; explicit deps below kept for clarity.
+        -->
+        <dependency>
+            <groupId>org.eclipse.rdf4j</groupId>
+            <artifactId>rdf4j-queryresultio-sparqljson</artifactId>
+            <version>${rdf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.rdf4j</groupId>
+            <artifactId>rdf4j-queryresultio-text</artifactId>
+            <version>${rdf4j.version}</version>
+        </dependency>
+
+        <!-- ── JSpecify — null-safety annotations ───────────────────────── -->
+        <!--
+            Spring Framework 7 and Spring Boot 4 have migrated from
+            org.springframework.lang.@Nullable / @NonNull to the portfolio-
+            wide JSpecify standard. Add this so your own code can annotate
+            with @Nullable / @NonNull consistently.
+            IDE support: IntelliJ IDEA 2025.3+, NullAway, Kotlin 2.2.
+        -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <version>${jspecify.version}</version>
+        </dependency>
+
+        <!-- ── Jackson 3 (default in Spring Boot 4) ─────────────────────── -->
+        <!--
+            Jackson 3 is the new default JSON library in Boot 4.
+            The group ID remains com.fasterxml.jackson but internal packages
+            have moved from com.fasterxml.jackson.* to tools.jackson.*.
+            Custom serialisers / modules referencing internal Jackson 2 APIs
+            must be updated. Jackson 2 artefacts remain available (deprecated).
+            Boot 4 BOM pins the correct Jackson 3 versions; no explicit version
+            needed here.
+        -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- ── Lombok ────────────────────────────────────────────────────── -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ══════════════════ TEST SCOPE ══════════════════════════════════ -->
+
+        <!--
+            spring-boot-starter-test in Boot 4:
+              • JUnit 4 fully REMOVED — use JUnit Jupiter (@Test from org.junit.jupiter)
+              • Mockito 5.x (aligned with JUnit 5 extension model)
+              • @MockBean / @SpyBean removed (deprecated in 3.4, gone in 4.0);
+                use Mockito.mock() / @ExtendWith(MockitoExtension.class) instead.
+              • AssertJ 3.x included as before.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            In-memory RDF4J Sail — enables unit tests without a live GraphDB
+            server. SailRepository(new MemoryStore()) is the test double.
+        -->
+        <dependency>
+            <groupId>org.eclipse.rdf4j</groupId>
+            <artifactId>rdf4j-sail-memory</artifactId>
+            <version>${rdf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.rdf4j</groupId>
+            <artifactId>rdf4j-repository-sail</artifactId>
+            <version>${rdf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- ── Maven Compiler ─────────────────────────────────────────── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <!-- Version managed by Boot 4 BOM -->
+                <configuration>
+                    <release>25</release>
+                    <!--
+                        Enable NullAway via Error Prone for build-time null checking.
+                        Requires JDK 21+ (satisfied by Java 25 here).
+                        Remove the compilerArgs block if you prefer IDE-only checking.
+                    -->
+                    <compilerArgs>
+                        <arg>-XDcompilePolicy=simple</arg>
+                        <arg>-Xplugin:ErrorProne
+                            -Xep:NullAway:ERROR
+                            -XepOpt:NullAway:AnnotatedPackages=com.example.graphdb
+                        </arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.errorprone</groupId>
+                            <artifactId>error_prone_core</artifactId>
+                            <version>${error-prone.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.uber.nullaway</groupId>
+                            <artifactId>nullaway</artifactId>
+                            <version>${nullaway.version}</version>
+                        </path>
+                        <!-- Lombok must appear before NullAway in the processor path -->
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- ── Spring Boot Maven Plugin ──────────────────────────────── -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- ── GraalVM Native Image ───────────────────────────────────── -->
+            <!--
+                Boot 4 AOT requires GraalVM native-image 25 or later.
+                Run: mvn -Pnative native:compile
+            -->
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <!-- Version aligned with GraalVM 25 / Boot 4 -->
+                <version>0.10.6</version>
+                <configuration>
+                    <imageName>graphdb-repository</imageName>
+                    <buildArgs>
+                        <buildArg>--no-fallback</buildArg>
+                        <buildArg>--initialize-at-build-time=org.eclipse.rdf4j</buildArg>
+                    </buildArgs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>build-native</id>
+                        <goals>
+                            <goal>compile-no-fork</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Activate GraalVM native compilation with: mvn -Pnative package -->
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <extensions>true</extensions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>
